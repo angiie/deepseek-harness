@@ -1,0 +1,68 @@
+# Intel x86 (x64) macOS 桌面安装包自动打包
+#
+# 触发条件：本项目创建新的 Release 时自动触发。
+# 构建机器：GitHub 托管的 Intel x64 macOS runner（macos-15）。
+# 产物：unsigned（未签名）Intel x64 DMG，构建完成后自动上传到触发它的那个 Release 作为附件。
+#
+# 注意：
+#   - 未签名 DMG 会被 macOS Gatekeeper 拦截，普通用户安装时需右键“打开”或手动放行，
+#     仅适用于内部调试/自托管分发，不适合对外公开发布。
+#   - 若要对外发布签名 + 公证（notarized）的安装包，需要在仓库 Secrets 里配置
+#     CSC_LINK / CSC_KEY_PASSWORD 及 Apple 公证凭据，并把下面的打包命令换成
+#     `package:desktop:mac:x64`，并让工作流生成 .env.macos。当前版本保持零配置可运行。
+name: Package Desktop · macOS Intel (x64) · Release
+
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: macos-intel-desktop-package
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    env:
+      DSH_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        id: checkout
+        with:
+          persist-credentials: false
+          clean: true
+          ref: ${{ github.event.release.tag_name }}
+      - uses: pnpm/action-setup@v5.0.0
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - name: Configure persistent package caches
+        env:
+          DSH_DESKTOP_PACKAGE_CACHE_DIR: ${{ runner.tool_cache }}/dsh-desktop-package-cache
+        run: |
+          echo "DSH_DESKTOP_PACKAGE_CACHE_DIR=$DSH_DESKTOP_PACKAGE_CACHE_DIR" >> "$GITHUB_ENV"
+          echo "PNPM_CONFIG_STORE_DIR=$DSH_DESKTOP_PACKAGE_CACHE_DIR/workspace-pnpm-store" >> "$GITHUB_ENV"
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check packaging configuration and toolchain
+        run: pnpm run package:desktop:mac:x64:unsigned --check
+      - name: Build unsigned Intel (x64) installer
+        run: pnpm run package:desktop:mac:x64:unsigned
+      - name: Show produced artifacts
+        run: |
+          ls -lh apps/desktop/.desktop-build/targets/mac-x64/unsigned-artifacts/ || true
+      - name: Upload DMG to release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: apps/desktop/.desktop-build/targets/mac-x64/unsigned-artifacts/*
