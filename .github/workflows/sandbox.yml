@@ -1,3 +1,4 @@
+# This fork builds only the Intel Mac installer automatically; other checks remain opt-in.
 # Sandbox CI: the keyless real-kernel confinement proofs, plus the darwin
 # unit-parity job (unit-darwin) that needs the matrix's macOS image. This
 # master-only reference stays outside the pull-request verdict; rationale lives in
@@ -9,8 +10,7 @@
 name: Sandbox
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

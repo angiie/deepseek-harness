@@ -1,3 +1,4 @@
+# This fork builds only the Intel Mac installer automatically; other checks remain opt-in.
 # CI for the node-addon-system packages under native/system. A separate
 # workflow from ci.yml keeps the native OS/architecture matrix independent of
 # the harness Node matrix. Each platform job builds once and tests those bytes
@@ -7,15 +8,6 @@ name: Node Addon System
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/node-addon-system.yml'
-      - '.github/workflows/node-addon-system-release.yml'
-      - 'native/system/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-  push:
-    branches: [master]
     paths:
       - '.github/workflows/node-addon-system.yml'
       - '.github/workflows/node-addon-system-release.yml'

@@ -1,8 +1,9 @@
+# This fork builds only the Intel Mac installer automatically; other checks remain opt-in.
 # Pack the vendored framework sequence: the nine rescoped Cordis packages under
 # vendor/, each on its own version line. This sequence releases independently of
 # dsh and of the native packages.
 #
-# Pack runs without credentials on every pull request and master push.
+# Pack runs without credentials on pull requests and manual dispatch.
 # Publication is a manual workflow_dispatch of release-vendor-publish.yml from a
 # vendor-* tag; a vendor release can carry several versions, so each package has
 # its own tag.
@@ -10,8 +11,6 @@ name: Release (vendor)
 
 on:
   pull_request:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 permissions:

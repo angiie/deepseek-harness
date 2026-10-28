@@ -1,18 +1,11 @@
-# Intel x86 (x64) macOS 桌面安装包自动打包
-#
-# 触发条件：本项目创建新的 Release 时自动触发。
-# 构建机器：GitHub 托管的 Intel x64 macOS runner（macos-15）。
-# 产物：unsigned（未签名）Intel x64 DMG，构建完成后自动上传到触发它的那个 Release 作为附件。
-#
-# 注意：
-#   - 未签名 DMG 会被 macOS Gatekeeper 拦截，普通用户安装时需右键“打开”或手动放行，
-#     仅适用于内部调试/自托管分发，不适合对外公开发布。
-#   - 若要对外发布签名 + 公证（notarized）的安装包，需要在仓库 Secrets 里配置
-#     CSC_LINK / CSC_KEY_PASSWORD 及 Apple 公证凭据，并把下面的打包命令换成
-#     `package:desktop:mac:x64`，并让工作流生成 .env.macos。当前版本保持零配置可运行。
-name: Package Desktop · macOS Intel (x64) · Release
+# Build an unsigned Intel Mac installer without API credentials or signing secrets.
+# Push/manual builds retain a DMG artifact; release builds also attach it to the Release.
+name: Package Desktop · macOS Intel (x64)
 
 on:
+  push:
+    branches: [master]
+  workflow_dispatch:
   release:
     types: [released]
 
@@ -25,7 +18,7 @@ concurrency:
 
 jobs:
   package:
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 180
     defaults:
       run:
@@ -38,7 +31,7 @@ jobs:
         with:
           persist-credentials: false
           clean: true
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.ref }}
       - uses: pnpm/action-setup@v5.0.0
         with:
           dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}
@@ -57,12 +50,17 @@ jobs:
         run: pnpm run package:desktop:mac:x64:unsigned --check
       - name: Build unsigned Intel (x64) installer
         run: pnpm run package:desktop:mac:x64:unsigned
-      - name: Show produced artifacts
-        run: |
-          ls -lh apps/desktop/.desktop-build/targets/mac-x64/unsigned-artifacts/ || true
+      - name: Retain Intel (x64) installer
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: macos-x64-unsigned
+          path: apps/desktop/.desktop-build/targets/mac-x64/unsigned-artifacts/*.dmg
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload DMG to release
-        if: success()
+        if: success() && github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.release.tag_name }}
-          files: apps/desktop/.desktop-build/targets/mac-x64/unsigned-artifacts/*
+          files: apps/desktop/.desktop-build/targets/mac-x64/unsigned-artifacts/*.dmg
+          fail_on_unmatched_files: true

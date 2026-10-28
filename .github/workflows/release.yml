@@ -1,16 +1,15 @@
+# This fork builds only the Intel Mac installer automatically; other checks remain opt-in.
 # Pack the dsh release sequence: every package under packages/ plus the apps/
 # entries, all on one version. The vendored framework and the native packages are
 # separate sequences with their own workflows and version lines.
 #
-# Pack and dependency-layout verification run without credentials on every pull
-# request and master push. Publication is a manual workflow_dispatch of
+# Pack and dependency-layout verification run without credentials on pull requests
+# and manual dispatch. Publication is a manual workflow_dispatch of
 # release-publish.yml from a dsh-v* tag.
 name: Release (dsh)
 
 on:
   pull_request:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 permissions:

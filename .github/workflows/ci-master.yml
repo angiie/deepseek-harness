@@ -1,8 +1,7 @@
+# This fork builds only the Intel Mac installer automatically; other checks remain opt-in.
 name: CI master
 
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
     inputs:
       suite:
